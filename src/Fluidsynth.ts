@@ -8,8 +8,7 @@ function sleep(ms: number) {
 
 type FluidSynthOptions = {
   midiAbsFiles: string[];
-  // fluidsynth executable name/path
-  fluidsynthBin?: string;
+  fluidsynthBin?: string; // fluidsynth executable name/path
 };
 
 export class FluidSynth {
@@ -32,7 +31,10 @@ export class FluidSynth {
       let done = false;
 
       const finish = () => {
-        if (done) return;
+        if (done) {
+          return;
+        }
+
         done = true;
         resolve();
       };
@@ -46,7 +48,9 @@ export class FluidSynth {
 
   /** Запускает fluidsynth (интерактивный режим), не начинает воспроизведение. */
   async start(): Promise<void> {
-    if (this.proc) return;
+    if (this.proc) {
+      return;
+    }
 
     const args: string[] = [
       '-i',
@@ -64,6 +68,7 @@ export class FluidSynth {
 
     this.proc.on('exit', (code, signal) => {
       console.log(`\nfluidsynth exited: code=${code} signal=${signal}`);
+
       this.proc = null;
       this.paused = false;
     });
@@ -75,30 +80,42 @@ export class FluidSynth {
   /** Корректно останавливает fluidsynth. */
   async stop(): Promise<void> {
     const p = this.proc;
-    if (!p) return;
+
+    if (!p) {
+      return;
+    }
 
     // попросили красиво
     try {
-      p.stdin.write("quit\n");
-    } catch {}
+      p.stdin.write('quit\n');
+    } catch {
+    }
 
     // ждём завершения
     await this.waitExit(p, 800);
 
     // если всё ещё не умер — добиваем
     if (this.proc === p) {
-      try { p.kill("SIGTERM"); } catch {}
+      try {
+        p.kill('SIGTERM');
+      } catch {
+      }
       await this.waitExit(p, 400);
     }
 
     // крайний случай
     if (this.proc === p) {
-      try { p.kill("SIGKILL"); } catch {}
+      try {
+        p.kill('SIGKILL');
+      } catch {}
       await this.waitExit(p, 200);
     }
 
     // только теперь считаем, что процесса нет
-    if (this.proc === p) this.proc = null;
+    if (this.proc === p) {
+      this.proc = null;
+    }
+
     this.paused = false;
   }
 
@@ -109,16 +126,15 @@ export class FluidSynth {
     }
 
     this.index = (i + this.midiAbsFiles.length) % this.midiAbsFiles.length;
+
     const file = this.midiAbsFiles[this.index];
 
     console.log(`\n▶ ${this.index + 1}/${this.midiAbsFiles.length}: ${path.basename(file)}`);
 
     this.paused = false;
 
-    // this.send('player_stop');
     await this.stop();
     await this.start();
-    // this.send('player_start');
   }
 
   async next(): Promise<void> {
@@ -141,17 +157,22 @@ export class FluidSynth {
     if (!this.paused) {
       this.send('player_stop');
       this.paused = true;
+
       console.log('⏸ paused');
     } else {
       this.send('player_cont');
       this.paused = false;
+
       console.log('▶ resumed');
     }
   }
 
   /** Хелпер для отправки команды в интерактивную консоль fluidsynth. */
   private send(cmd: string): void {
-    if (!this.proc) return;
+    if (!this.proc) {
+      return;
+    }
+
     this.proc.stdin.write(cmd + '\n');
   }
 
@@ -215,4 +236,3 @@ export class FluidSynth {
     });
   }
 }
-
