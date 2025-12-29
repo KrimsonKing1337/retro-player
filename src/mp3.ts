@@ -9,7 +9,7 @@ const DEST = 'D:/Projects/retro-player/examples_dest/mp3';
 
 async function filesProcessing() {
   const mp3FilesAbsolute = fg.sync('*.{mp3}', {
-    cwd: 'examples/midi',
+    cwd: 'examples/mp3',
     onlyFiles: true,
     absolute: true,
   });
