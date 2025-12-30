@@ -7,16 +7,15 @@ import { Xdotool } from './Xdotool.js';
 import { setClipboard } from './setClipboard.js';
 import { dirExists } from './dirExist.js';
 
+const SOURCE = 'D:/Projects/retro-player/examples/mmf';
 const DEST = 'D:/Projects/retro-player/examples_dest/mmf';
 
 async function filesProcessing() {
-  const mmfFiles = fg.sync('*.mmf', {
-    cwd: 'examples/mmf',
+  const mmfFiles = fg.sync(`${SOURCE}/**/*.mmf`, {
     onlyFiles: true,
   });
 
-  const mmfFilesAbsolute = fg.sync('*.mmf', {
-    cwd: 'examples/mmf',
+  const mmfFilesAbsolute = fg.sync(`${SOURCE}/**/*.mmf`, {
     onlyFiles: true,
     absolute: true,
   });
@@ -24,7 +23,7 @@ async function filesProcessing() {
   let mmfFilesAsString = '';
 
   mmfFiles.forEach((mmfFileCur) => {
-    mmfFilesAsString += `"${mmfFileCur}",`
+    mmfFilesAsString += `"${path.basename(mmfFileCur)}",`
   });
 
   if (await dirExists(DEST)) {
@@ -35,7 +34,7 @@ async function filesProcessing() {
     await fs.cp(mmfFileCur, `${DEST}/${path.basename(mmfFileCur)}`);
   }
 
-  console.log(mmfFilesAbsolute);
+  console.log(mmfFilesAsString);
 
   return mmfFilesAsString;
 }
