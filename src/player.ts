@@ -20,7 +20,9 @@ function fileType(file: string) {
 }
 
 let index = 0;
+
 let cvlc: ChildProcessWithoutNullStreams | null = null;
+let fluidsynth: ChildProcessWithoutNullStreams | null = null;
 
 function cvlcSend(cmd: string) {
   if (!cvlc) {
@@ -41,15 +43,42 @@ function cvlcPlay(file: string) {
   cvlc.stderr.on('data', d => process.stderr.write(String(d)));
 }
 
+function fluidsynthSend(cmd: string) {
+  if (!fluidsynth) {
+    return;
+  }
+
+  fluidsynth.stdin.write(cmd + '\n');
+}
+
+function fluidsynthPlay(file: string) {
+  fluidsynth = spawn('fluidsynth', [
+    '-i',
+    '--audio-bufsize',
+    '2048',
+    '-g',
+    '1.0',
+    file,
+  ], { stdio: ['pipe', 'pipe', 'pipe'] });
+
+  fluidsynth.stdout.on('data', d => process.stdout.write(String(d)));
+  fluidsynth.stderr.on('data', d => process.stderr.write(String(d)));
+}
+
 function play(file: string) {
-  if (cvlc) {
+  if (fluidsynth) {
+    fluidsynthSend('quit');
+    fluidsynth = null;
+  } else if (cvlc) {
     cvlcSend('quit');
     cvlc = null;
   }
 
   const type = fileType(files[index]);
 
-  if (type === 'other') {
+  if (type === 'midi') {
+    fluidsynthPlay(file);
+  } else if (type === 'other') {
     cvlcPlay(file);
   }
 }
@@ -77,17 +106,17 @@ function bindKeyboardControls(): void {
       case 'space':
         console.log('play/pause');
         play(files[index]);
+
         break;
       case 'n':
         index++;
         play(files[index]);
 
-        cvlcSend('quit');
-
         break;
       case 'p':
         index--;
         play(files[index]);
+
         break;
       case 'q':
         console.log('quit');
