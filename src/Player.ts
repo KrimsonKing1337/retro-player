@@ -15,6 +15,7 @@ const MMF_DEST = 'D:/Projects/retro-player/examples_dest/mmf';
 export class Player {
   private readonly files: string[];
   private index: number;
+  private paused = false;
   private cvlc: ChildProcessWithoutNullStreams | null;
   private fluidsynth: ChildProcessWithoutNullStreams | null;
 
@@ -94,7 +95,8 @@ export class Player {
 
   cvlcPlay(file: string) {
     this.cvlc = spawn('cvlc', [
-      '--intf', 'rc',
+      '--intf',
+      'rc',
       '--rc-fake-tty',
       file,
     ], { stdio: ['pipe', 'pipe', 'pipe'] });
@@ -113,7 +115,6 @@ export class Player {
 
   fluidsynthPlay(file: string) {
     this.fluidsynth = spawn('fluidsynth', [
-      '-i',
       '--audio-bufsize',
       '2048',
       '-g',
@@ -123,6 +124,32 @@ export class Player {
 
     this.fluidsynth.stdout.on('data', d => process.stdout.write(String(d)));
     this.fluidsynth.stderr.on('data', d => process.stderr.write(String(d)));
+  }
+
+  async togglePlayPause() {
+    if (this.paused) {
+      await this.play(this.files[this.index]);
+      this.paused = false;
+    } else {
+      await this.pause();
+      this.paused = true;
+    }
+  }
+
+  async pause() {
+    if (this.fluidsynth) {
+      this.fluidsynthSend('player_stop');
+    } else if (this.cvlc) {
+      this.cvlcSend('pause');
+    }
+
+    const type = Player.fileType(this.files[this.index]);
+
+    if (type === 'mmf') {
+      await Xdotool.run('search', '--name', 'MidRadio Player', 'windowactivate', '--sync');
+      await Xdotool.run('sleep', '0.5');
+      await Xdotool.key('Space');
+    }
   }
 
   async play(file: string) {
@@ -147,6 +174,29 @@ export class Player {
     }
   }
 
+  async quit() {
+    if (this.fluidsynth) {
+      this.fluidsynthSend('quit');
+      this.fluidsynth = null;
+    }
+
+    if (this.cvlc) {
+      this.cvlcSend('quit');
+      this.cvlc = null;
+    }
+
+    const type = Player.fileType(this.files[this.index]);
+
+    if (type === 'mmf') {
+      await Xdotool.run('search', '--name', 'MidRadio Player', 'windowactivate', '--sync');
+      await Xdotool.run('sleep', '0.5');
+      await Xdotool.key('Space');
+    }
+
+    console.log('quit');
+    process.exit(0);
+  }
+
   bindKeyboardControls() {
     readline.emitKeypressEvents(process.stdin);
 
@@ -162,29 +212,32 @@ export class Player {
       }
 
       if (key.ctrl && key.name === 'c') {
-        console.log('quit');
-        process.exit(0);
+        await this.quit();
       }
 
       switch (key.name) {
         case 'space':
           console.log('play/pause');
-          await this.play(this.files[this.index]);
+
+          await this.togglePlayPause();
 
           break;
         case 'n':
+          console.log('next ->');
+
           this.index++;
           await this.play(this.files[this.index]);
 
           break;
         case 'p':
+          console.log('prev <-');
+
           this.index--;
           await this.play(this.files[this.index]);
 
           break;
         case 'q':
-          console.log('quit');
-          process.exit(0);
+          await this.quit();
           break;
         default:
           break;
