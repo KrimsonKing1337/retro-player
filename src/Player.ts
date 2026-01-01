@@ -48,6 +48,8 @@ export class Player {
   static async playMmf(file: string) {
     await Player.mmfFileProcessing(file);
 
+    const winTerminalId = await Xdotool.run('getactivewindow');
+
     await Xdotool.run('search', '--name', 'MidRadio Player', 'windowactivate', '--sync');
 
     await Xdotool.key('Shift+F10');
@@ -71,7 +73,8 @@ export class Player {
     await Xdotool.run('sleep', '0.5');
     await Xdotool.key('Space');
 
-    await Xdotool.run('search', '--name', 'Терминал', 'windowactivate', '--sync');
+    await Xdotool.run('sleep', '0.5');
+    await Xdotool.run('windowactivate', '--sync', winTerminalId as string);
   }
 
   constructor() {
