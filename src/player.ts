@@ -127,7 +127,7 @@ async function play(file: string) {
   }
 }
 
-function bindKeyboardControls(): void {
+async function bindKeyboardControls() {
   readline.emitKeypressEvents(process.stdin);
 
   if (process.stdin.isTTY) {
@@ -149,17 +149,17 @@ function bindKeyboardControls(): void {
     switch (key.name) {
       case 'space':
         console.log('play/pause');
-        play(files[index]);
+        await play(files[index]);
 
         break;
       case 'n':
         index++;
-        play(files[index]);
+        await play(files[index]);
 
         break;
       case 'p':
         index--;
-        play(files[index]);
+        await play(files[index]);
 
         break;
       case 'q':
