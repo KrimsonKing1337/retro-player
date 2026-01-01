@@ -78,6 +78,12 @@ export class Player {
     await Xdotool.run('windowactivate', '--sync', winTerminalId as string);
   }
 
+  static async pauseMmf() {
+    await Xdotool.run('search', '--name', 'MidRadio Player', 'windowactivate', '--sync');
+    await Xdotool.run('sleep', '0.5');
+    await Xdotool.key('Space');
+  }
+
   constructor() {
     this.files = Player.getFiles();
     this.index = 0;
@@ -146,9 +152,7 @@ export class Player {
     const type = Player.fileType(this.files[this.index]);
 
     if (type === 'mmf') {
-      await Xdotool.run('search', '--name', 'MidRadio Player', 'windowactivate', '--sync');
-      await Xdotool.run('sleep', '0.5');
-      await Xdotool.key('Space');
+      await Player.pauseMmf();
     }
   }
 
@@ -188,9 +192,7 @@ export class Player {
     const type = Player.fileType(this.files[this.index]);
 
     if (type === 'mmf') {
-      await Xdotool.run('search', '--name', 'MidRadio Player', 'windowactivate', '--sync');
-      await Xdotool.run('sleep', '0.5');
-      await Xdotool.key('Space');
+      await Player.pauseMmf();
     }
 
     console.log('quit');
@@ -204,7 +206,7 @@ export class Player {
       process.stdin.setRawMode(true);
     }
 
-    console.log('waiting command');
+    console.log('waiting for command...');
 
     process.stdin.on('keypress', async (_str, key) => {
       if (!key) {
