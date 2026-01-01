@@ -1,6 +1,13 @@
 import fg from 'fast-glob';
 import readline from 'node:readline';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { dirExists } from './dirExist.js';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { Xdotool } from './Xdotool.js';
+import { setClipboard } from './setClipboard.js';
+
+const MMF_DEST = 'D:/Projects/retro-player/examples_dest/mmf';
 
 const files = fg.sync('D:/Projects/retro-player/examples/**/*.*', {
   onlyFiles: true,
@@ -65,7 +72,42 @@ function fluidsynthPlay(file: string) {
   fluidsynth.stderr.on('data', d => process.stderr.write(String(d)));
 }
 
-function play(file: string) {
+async function mmfFileProcessing(file: string) {
+  if (await dirExists(MMF_DEST)) {
+    await fs.rm(MMF_DEST, { recursive: true, force: true });
+  }
+
+  await fs.cp(file, `${MMF_DEST}/${path.basename(file)}`);
+}
+
+async function playMmf(file: string) {
+  await mmfFileProcessing(file);
+
+  await Xdotool.run('search', '--name', 'MidRadio Player', 'windowactivate', '--sync');
+
+  await Xdotool.key('Shift+F10');
+  await Xdotool.run('sleep', '0.15');
+  await Xdotool.key('Down');
+  await Xdotool.key('Down');
+  await Xdotool.key('Down');
+  await Xdotool.key('Down');
+  await Xdotool.key('Down');
+  await Xdotool.key('Down');
+  await Xdotool.key('Down');
+  await Xdotool.run('sleep', '0.1');
+  await Xdotool.key('Return');
+
+  await setClipboard(path.basename(file));
+
+  await Xdotool.run('sleep', '0.5');
+  await Xdotool.key('Ctrl+V');
+  await Xdotool.run('sleep', '0.5');
+  await Xdotool.key('Return');
+  await Xdotool.run('sleep', '0.5');
+  await Xdotool.key('Space');
+}
+
+async function play(file: string) {
   if (fluidsynth) {
     fluidsynthSend('quit');
     fluidsynth = null;
@@ -78,6 +120,8 @@ function play(file: string) {
 
   if (type === 'midi') {
     fluidsynthPlay(file);
+  } else if (type === 'mmf') {
+    await playMmf(file);
   } else if (type === 'other') {
     cvlcPlay(file);
   }
