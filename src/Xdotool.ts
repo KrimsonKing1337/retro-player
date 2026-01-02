@@ -25,11 +25,15 @@ export class Xdotool {
           return;
         }
 
+        const signalStr = signal ?? 'none';
+        const argsStr = args.join(' ');
+        const stderrStr = stderr ? `stderr: ${stderr}\n` : '';
+        const stdoutStr = stdout ? `stdout: ${stdout}\n` : '';
+
         const msg =
-          `xdotool failed (code=${code}, signal=${signal ?? 'none'})\n` +
-          `args: ${args.join(' ')}\n` +
-          (stderr ? `stderr: ${stderr}\n` : '') +
-          (stdout ? `stdout: ${stdout}\n` : '');
+          `xdotool failed (code=${code}, signal=${signalStr})\n` +
+          `args: ${argsStr}\n` +
+          `${stderrStr} ${stdoutStr}`;
 
         reject(new Error(msg));
       });
