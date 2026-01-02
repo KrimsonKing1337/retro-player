@@ -46,10 +46,12 @@ export class Player {
 
   static async playMmf(file: string) {
     await Player.mmfFileProcessing(file);
+    await Xdotool.run('sleep', '0.15');
 
     const winTerminalId = await Xdotool.run('getactivewindow');
 
     await Xdotool.run('search', '--sync', '--name', 'MidRadio Player', 'windowactivate');
+    await Xdotool.run('sleep', '0.15');
 
     await Xdotool.key('Shift+F10');
     await Xdotool.run('sleep', '0.15');
@@ -60,31 +62,33 @@ export class Player {
     await Xdotool.key('Down');
     await Xdotool.key('Down');
     await Xdotool.key('Down');
-    await Xdotool.run('sleep', '0.1');
+    await Xdotool.run('sleep', '0.15');
     await Xdotool.key('Return');
 
     await setClipboard(path.basename(file));
 
-    await Xdotool.run('sleep', '0.5');
+    await Xdotool.run('sleep', '0.15');
     await Xdotool.key('Ctrl+V');
-    await Xdotool.run('sleep', '0.5');
+    await Xdotool.run('sleep', '0.15');
     await Xdotool.key('Return');
-    await Xdotool.run('sleep', '0.5');
-    await Xdotool.key('Space');
 
-    await Xdotool.run('sleep', '0.5');
+    await Xdotool.run('sleep', '0.15');
     await Xdotool.run('windowactivate', '--sync', winTerminalId as string);
   }
 
   static async pauseMmf() {
-    const winTerminalId = await Xdotool.run('getactivewindow');
+    await Xdotool.run('sleep', '0.15');
 
-    await Xdotool.run('search', '--sync', '--name', 'MidRadio Player', 'windowactivate');
-    await Xdotool.run('sleep', '0.5');
-    await Xdotool.key('Space');
+    const winPlayerId = await Xdotool.run('search', '--sync', '--name', 'MidRadio Player') as string;
+    const winTerminalId = await Xdotool.run('getactivewindow') as string;
 
-    await Xdotool.run('sleep', '0.5');
-    await Xdotool.run('windowactivate', '--sync', winTerminalId as string);
+    await Xdotool.run('windowactivate', '--sync', winPlayerId);
+    await Xdotool.run('sleep', '0.15');
+
+    await Xdotool.run('key', '--window', winPlayerId, 'space'); // lowercase!
+
+    await Xdotool.run('sleep', '0.15');
+    await Xdotool.run('windowactivate', '--sync', winTerminalId);
   }
 
   constructor() {
@@ -135,10 +139,18 @@ export class Player {
     this.fluidsynth.stderr.on('data', d => process.stderr.write(String(d)));
   }
 
+  async quitMmfPlayer() {
+    if (!this.paused) {
+      await Player.pauseMmf();
+    }
+  }
+
   async togglePlayPause() {
     if (this.paused) {
+      console.log('play');
       await this.play(this.files[this.index]);
     } else {
+      console.log('pause');
       await this.pause();
     }
   }
@@ -197,7 +209,7 @@ export class Player {
     const type = Player.fileType(this.files[this.index]);
 
     if (type === 'mmf') {
-      await Player.pauseMmf();
+      await this.quitMmfPlayer();
     }
 
     console.log('quit');
@@ -224,8 +236,6 @@ export class Player {
 
       switch (key.name) {
         case 'space':
-          console.log('play/pause');
-
           await this.togglePlayPause();
 
           break;
