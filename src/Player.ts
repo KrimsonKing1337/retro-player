@@ -7,7 +7,6 @@ import fg from 'fast-glob';
 import 'dotenv/config';
 
 import { Xdotool } from './Xdotool.js';
-import { dirExists } from './dirExist.js';
 import { setClipboard } from './setClipboard.js';
 
 const FILES_SRC = process.env.FILES_SRC as string;
@@ -40,10 +39,8 @@ export class Player {
   }
 
   static async mmfFileProcessing(file: string) {
-    if (await dirExists(MMF_DEST)) {
-      await fs.rm(MMF_DEST, { recursive: true, force: true });
-    }
-
+    await fs.rm(MMF_DEST, { recursive: true, force: true });
+    await fs.mkdir(MMF_DEST);
     await fs.cp(file, `${MMF_DEST}/${path.basename(file)}`);
   }
 
@@ -80,9 +77,14 @@ export class Player {
   }
 
   static async pauseMmf() {
-    await Xdotool.run('search', '--name', 'MidRadio Player', 'windowactivate', '--sync');
+    const winTerminalId = await Xdotool.run('getactivewindow');
+
+    await Xdotool.run('search', '--sync', '--name', 'MidRadio Player', 'windowactivate');
     await Xdotool.run('sleep', '0.5');
     await Xdotool.key('Space');
+
+    await Xdotool.run('sleep', '0.5');
+    await Xdotool.run('windowactivate', '--sync', winTerminalId as string);
   }
 
   constructor() {
@@ -136,14 +138,14 @@ export class Player {
   async togglePlayPause() {
     if (this.paused) {
       await this.play(this.files[this.index]);
-      this.paused = false;
     } else {
       await this.pause();
-      this.paused = true;
     }
   }
 
   async pause() {
+    this.paused = true;
+
     if (this.fluidsynth) {
       this.fluidsynthSend('player_stop');
     } else if (this.cvlc) {
@@ -158,6 +160,8 @@ export class Player {
   }
 
   async play(file: string) {
+    this.paused = false;
+
     if (this.fluidsynth) {
       this.fluidsynthSend('quit');
       this.fluidsynth = null;
