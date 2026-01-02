@@ -3,3 +3,4 @@ dist
 node_modules
 examples
 examples_dest
+.env

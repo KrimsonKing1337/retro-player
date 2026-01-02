@@ -4,13 +4,14 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import fg from 'fast-glob';
+import 'dotenv/config';
 
 import { Xdotool } from './Xdotool.js';
 import { dirExists } from './dirExist.js';
 import { setClipboard } from './setClipboard.js';
 
-const FILES_SRC = 'D:/Projects/retro-player/examples/**/*.*';
-const MMF_DEST = 'D:/Projects/retro-player/examples_dest/mmf';
+const FILES_SRC = process.env.FILES_SRC as string;
+const MMF_DEST = process.env.MMF_DEST as string;
 
 export class Player {
   private readonly files: string[];
@@ -51,6 +52,7 @@ export class Player {
 
     const winTerminalId = await Xdotool.run('getactivewindow');
 
+    await Xdotool.run('search', '--name', 'MidRadio Player', '--sync');
     await Xdotool.run('search', '--name', 'MidRadio Player', 'windowactivate', '--sync');
 
     await Xdotool.key('Shift+F10');
