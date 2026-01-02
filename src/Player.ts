@@ -52,8 +52,7 @@ export class Player {
 
     const winTerminalId = await Xdotool.run('getactivewindow');
 
-    await Xdotool.run('search', '--name', 'MidRadio Player', '--sync');
-    await Xdotool.run('search', '--name', 'MidRadio Player', 'windowactivate', '--sync');
+    await Xdotool.run('search', '--sync', '--name', 'MidRadio Player', 'windowactivate');
 
     await Xdotool.key('Shift+F10');
     await Xdotool.run('sleep', '0.15');

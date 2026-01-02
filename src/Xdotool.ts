@@ -11,12 +11,27 @@ export class Xdotool {
       p.stdout.on('data', (d) => (out += d.toString()));
       p.stderr.on('data', (d) => (err += d.toString()));
 
-      p.on('exit', code => {
+      p.on('error', (e) => {
+        reject(e);
+      });
+
+      p.on('close', (code, signal) => {
+        const stdout = out.trim();
+        const stderr = err.trim();
+
         if (code === 0) {
-          resolve(out.trim());
-        } else {
-          reject(new Error(`xdotool exited with ${code}`));
+          resolve(stdout);
+
+          return;
         }
+
+        const msg =
+          `xdotool failed (code=${code}, signal=${signal ?? 'none'})\n` +
+          `args: ${args.join(' ')}\n` +
+          (stderr ? `stderr: ${stderr}\n` : '') +
+          (stdout ? `stdout: ${stdout}\n` : '');
+
+        reject(new Error(msg));
       });
     });
   }
