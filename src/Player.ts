@@ -16,7 +16,7 @@ const MMF_DEST = process.env.MMF_DEST as string;
 export class Player {
   private readonly files: string[];
   private index: number;
-  private paused = false;
+  private paused = true;
   private cvlc: ChildProcessWithoutNullStreams | null;
   private fluidsynth: ChildProcessWithoutNullStreams | null;
 
