@@ -115,7 +115,16 @@ export class Player {
     ], { stdio: ['pipe', 'pipe', 'pipe'] });
 
     this.cvlc.stdout.on('data', d => process.stdout.write(String(d)));
-    this.cvlc.stderr.on('data', d => process.stderr.write(String(d)));
+
+    this.cvlc.stderr.on('data', async (d) => {
+      const data = String(d);
+
+      process.stderr.write(data);
+
+      if (data.toLowerCase().includes('error')) {
+        await this.next();
+      }
+    });
   }
 
   fluidsynthSend(cmd: string) {
@@ -216,6 +225,20 @@ export class Player {
     process.exit(0);
   }
 
+  async next() {
+    console.log('next ->');
+
+    this.index++;
+    await this.play(this.files[this.index]);
+  }
+
+  async prev() {
+    console.log('prev <-');
+
+    this.index--;
+    await this.play(this.files[this.index]);
+  }
+
   bindKeyboardControls() {
     readline.emitKeypressEvents(process.stdin);
 
@@ -240,17 +263,11 @@ export class Player {
 
           break;
         case 'n':
-          console.log('next ->');
-
-          this.index++;
-          await this.play(this.files[this.index]);
+          await this.next();
 
           break;
         case 'p':
-          console.log('prev <-');
-
-          this.index--;
-          await this.play(this.files[this.index]);
+          await this.prev();
 
           break;
         case 'q':
