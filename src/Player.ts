@@ -21,8 +21,11 @@ export class Player {
   private soundfontIndex: number;
 
   private paused = true;
+
   private cvlc: ChildProcessWithoutNullStreams | null;
   private fluidsynth: ChildProcessWithoutNullStreams | null;
+
+  private type: 'midi' | 'mmf' | 'other';
 
   static getFiles(): string[] {
     return fg.sync(FILES_SRC, {
@@ -116,6 +119,8 @@ export class Player {
 
     this.cvlc = null;
     this.fluidsynth = null;
+
+    this.type = Player.fileType(this.audios[this.audiosIndex]);
   }
 
   cvlcSend(cmd: string) {
@@ -176,6 +181,10 @@ export class Player {
   }
 
   fluidSynthNextSoundfont() {
+    if (this.type !== 'midi') {
+      return;
+    }
+
     this.fluidsynthSend('quit');
     this.fluidsynth = null;
     this.soundfontIndex = (this.soundfontIndex + 1) % this.soundfonts.length;
@@ -192,9 +201,11 @@ export class Player {
   async togglePlayPause() {
     if (this.paused) {
       console.log('play');
+
       await this.play(this.audios[this.audiosIndex]);
     } else {
       console.log('pause');
+
       await this.pause();
     }
   }
@@ -208,9 +219,7 @@ export class Player {
       this.cvlcSend('pause');
     }
 
-    const type = Player.fileType(this.audios[this.audiosIndex]);
-
-    if (type === 'mmf') {
+    if (this.type === 'mmf') {
       await Player.pauseMmf();
     }
   }
@@ -228,13 +237,11 @@ export class Player {
       this.cvlc = null;
     }
 
-    const type = Player.fileType(this.audios[this.audiosIndex]);
-
-    if (type === 'midi') {
+    if (this.type === 'midi') {
       this.fluidsynthPlay(file);
-    } else if (type === 'mmf') {
+    } else if (this.type === 'mmf') {
       await Player.playMmf(file);
-    } else if (type === 'other') {
+    } else if (this.type === 'other') {
       this.cvlcPlay(file);
     }
   }
@@ -250,9 +257,7 @@ export class Player {
       this.cvlc = null;
     }
 
-    const type = Player.fileType(this.audios[this.audiosIndex]);
-
-    if (type === 'mmf') {
+    if (this.type === 'mmf') {
       await this.quitMmfPlayer();
     }
 
@@ -264,6 +269,8 @@ export class Player {
     console.log('next ->');
 
     this.audiosIndex = (this.audiosIndex + 1) % this.audios.length;
+    this.type = Player.fileType(this.audios[this.audiosIndex]);
+
     await this.play(this.audios[this.audiosIndex]);
   }
 
@@ -271,6 +278,8 @@ export class Player {
     console.log('prev <-');
 
     this.audiosIndex = (this.audiosIndex - 1) % this.audios.length;
+    this.type = Player.fileType(this.audios[this.audiosIndex]);
+
     await this.play(this.audios[this.audiosIndex]);
   }
 
