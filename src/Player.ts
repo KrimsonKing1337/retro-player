@@ -1,4 +1,4 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import readline from 'node:readline';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -11,10 +11,15 @@ import { setClipboard } from './setClipboard.js';
 
 const FILES_SRC = process.env.FILES_SRC as string;
 const MMF_DEST = process.env.MMF_DEST as string;
+const SF_SRC = process.env.SF_SRC as string;
 
 export class Player {
-  private readonly files: string[];
-  private index: number;
+  private readonly audios: string[];
+  private readonly soundfonts: string[];
+
+  private audiosIndex: number;
+  private soundfontIndex: number;
+
   private paused = true;
   private cvlc: ChildProcessWithoutNullStreams | null;
   private fluidsynth: ChildProcessWithoutNullStreams | null;
@@ -24,6 +29,17 @@ export class Player {
       onlyFiles: true,
       absolute: true,
     });
+  }
+
+  static getSoundfonts(): string[] {
+    const soundfonts = fg.sync(SF_SRC, {
+      onlyFiles: true,
+      absolute: true,
+    });
+
+    soundfonts.unshift(''); // default soundfont
+
+    return soundfonts;
   }
 
   static fileType(file: string) {
@@ -92,8 +108,12 @@ export class Player {
   }
 
   constructor() {
-    this.files = Player.getFiles();
-    this.index = 0;
+    this.audios = Player.getFiles();
+    this.soundfonts = Player.getSoundfonts();
+
+    this.audiosIndex = 0;
+    this.soundfontIndex = 0;
+
     this.cvlc = null;
     this.fluidsynth = null;
   }
@@ -135,17 +155,32 @@ export class Player {
     this.fluidsynth.stdin.write(cmd + '\n');
   }
 
-  fluidsynthPlay(file: string) {
-    this.fluidsynth = spawn('fluidsynth', [
+  fluidsynthPlay(file: string, soundfont: string = '') {
+    const params = [
       '--audio-bufsize',
       '2048',
       '-g',
       '1.0',
-      file,
-    ], { stdio: ['pipe', 'pipe', 'pipe'] });
+    ];
+
+    if (soundfont) {
+      params.push(soundfont);
+    }
+
+    params.push(file);
+
+    this.fluidsynth = spawn('fluidsynth', params, { stdio: ['pipe', 'pipe', 'pipe'] });
 
     this.fluidsynth.stdout.on('data', d => process.stdout.write(String(d)));
     this.fluidsynth.stderr.on('data', d => process.stderr.write(String(d)));
+  }
+
+  fluidSynthNextSoundfont() {
+    this.fluidsynthSend('quit');
+    this.fluidsynth = null;
+    this.soundfontIndex = (this.soundfontIndex + 1) % this.soundfonts.length;
+
+    this.fluidsynthPlay(this.audios[this.audiosIndex], this.soundfonts[this.soundfontIndex]);
   }
 
   async quitMmfPlayer() {
@@ -157,7 +192,7 @@ export class Player {
   async togglePlayPause() {
     if (this.paused) {
       console.log('play');
-      await this.play(this.files[this.index]);
+      await this.play(this.audios[this.audiosIndex]);
     } else {
       console.log('pause');
       await this.pause();
@@ -173,7 +208,7 @@ export class Player {
       this.cvlcSend('pause');
     }
 
-    const type = Player.fileType(this.files[this.index]);
+    const type = Player.fileType(this.audios[this.audiosIndex]);
 
     if (type === 'mmf') {
       await Player.pauseMmf();
@@ -193,7 +228,7 @@ export class Player {
       this.cvlc = null;
     }
 
-    const type = Player.fileType(this.files[this.index]);
+    const type = Player.fileType(this.audios[this.audiosIndex]);
 
     if (type === 'midi') {
       this.fluidsynthPlay(file);
@@ -215,7 +250,7 @@ export class Player {
       this.cvlc = null;
     }
 
-    const type = Player.fileType(this.files[this.index]);
+    const type = Player.fileType(this.audios[this.audiosIndex]);
 
     if (type === 'mmf') {
       await this.quitMmfPlayer();
@@ -228,15 +263,15 @@ export class Player {
   async next() {
     console.log('next ->');
 
-    this.index++;
-    await this.play(this.files[this.index]);
+    this.audiosIndex = (this.audiosIndex + 1) % this.audios.length;
+    await this.play(this.audios[this.audiosIndex]);
   }
 
   async prev() {
     console.log('prev <-');
 
-    this.index--;
-    await this.play(this.files[this.index]);
+    this.audiosIndex = (this.audiosIndex - 1) % this.audios.length;
+    await this.play(this.audios[this.audiosIndex]);
   }
 
   bindKeyboardControls() {
@@ -270,8 +305,13 @@ export class Player {
           await this.prev();
 
           break;
+        case 'w':
+          this.fluidSynthNextSoundfont();
+
+          break;
         case 'q':
           await this.quit();
+
           break;
         default:
           break;
@@ -280,6 +320,10 @@ export class Player {
   }
 
   init() {
+    if (!FILES_SRC || !MMF_DEST || !SF_SRC) {
+      throw new Error('FILES_SRC || MMF_DEST || SF_SRC env variable(s) not set (check .env)');
+    }
+
     this.bindKeyboardControls();
   }
 }
